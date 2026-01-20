@@ -31,7 +31,7 @@ pipeline{
             }
         }
 
-                stage('Building and Pushing Docker Image to GCR'){
+        stage('Building and Pushing Docker Image to GCR'){
             steps{
                 withCredentials([file(credentialsId: 'gcp-key' , variable : 'GOOGLE_APPLICATION_CREDENTIALS')]){
                     script{
@@ -47,9 +47,34 @@ pipeline{
                         gcloud auth configure-docker --quiet
 
                         docker build -t gcr.io/${GCP_PROJECT}/mlopsch1:latest .
-                        
+
                         docker push gcr.io/${GCP_PROJECT}/mlopsch1:latest 
 
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Google Cloud Run'){
+            steps{
+                withCredentials([file(credentialsId: 'gcp-key' , variable : 'GOOGLE_APPLICATION_CREDENTIALS')]){
+                    script{
+                        echo 'Deploy to Google Cloud Run.............'
+                        sh '''
+                        export PATH=$PATH:${GCLOUD_PATH}
+
+
+                        gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+
+                        gcloud config set project ${GCP_PROJECT}
+
+                        gcloud run deploy mlopsch1 \
+                            --image=gcr.io/${GCP_PROJECT}/mlopsch1:latest \
+                            --platform=managed \
+                            --region=us-central1 \
+                            --allow-unauthenticated
+                            
                         '''
                     }
                 }
